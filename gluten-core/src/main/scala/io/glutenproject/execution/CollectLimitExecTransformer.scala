@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.glutenproject.execution
 
 import java.util.concurrent.atomic.AtomicInteger
@@ -11,11 +27,19 @@ import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
 import org.apache.spark.sql.execution.{ColumnarCollapseTransformStages, ColumnarShuffleExchangeExec, SparkPlan, UnaryExecNode}
 import org.apache.spark.sql.vectorized.ColumnarBatch
 
-case class CollectLimitExecTransformer (limit: Int, child: SparkPlan, offset: Long)
+case class CollectLimitExecTransformer(limit: Int, child: SparkPlan, offset: Long)
   extends UnaryExecNode
-  with GlutenPlan {
+    with GlutenPlan {
 
   override def supportsColumnar: Boolean = true
+
+  override def output: Seq[Attribute] = child.output
+
+  override def simpleString(maxFields: Int): String = {
+    s"CollectLimitExecTransformer (limit=$limit)"
+  }
+
+  override def outputPartitioning: Partitioning = SinglePartition
 
   override protected def doExecute(): RDD[InternalRow] = {
     throw new UnsupportedOperationException(s"This operator doesn't support doExecute().")
@@ -27,15 +51,6 @@ case class CollectLimitExecTransformer (limit: Int, child: SparkPlan, offset: Lo
 
   override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan =
     copy(child = newChild)
-
-  override def output: Seq[Attribute] = child.output
-
-
-  override def simpleString(maxFields: Int): String = {
-    s"CollectLimitExecTransformer (limit=$limit)"
-  }
-
-  override def outputPartitioning: Partitioning = SinglePartition
 
   override protected def doExecuteColumnar(): RDD[ColumnarBatch] = {
     val childRDD = child.executeColumnar()
@@ -54,7 +69,8 @@ case class CollectLimitExecTransformer (limit: Int, child: SparkPlan, offset: Lo
           case wholeStage: WholeStageTransformer =>
             LimitTransformer(wholeStage.child, 0, limit)
           case other =>
-            LimitTransformer(ColumnarCollapseTransformStages.wrapInputIteratorTransformer(other), 0, limit)
+            LimitTransformer(
+              ColumnarCollapseTransformStages.wrapInputIteratorTransformer(other), 0, limit)
         }
         val limitStagePlan =
           WholeStageTransformer(limitBeforeShuffle)(transformStageCounter.incrementAndGet())
@@ -65,9 +81,9 @@ case class CollectLimitExecTransformer (limit: Int, child: SparkPlan, offset: Lo
       }
 
       val finalPlan =
-          WholeStageTransformer(finalLimitPlan)(transformStageCounter.incrementAndGet())
-        finalPlan.executeColumnar()
+        WholeStageTransformer(finalLimitPlan)(transformStageCounter.incrementAndGet())
+      finalPlan.executeColumnar()
 
-      }
     }
   }
+}

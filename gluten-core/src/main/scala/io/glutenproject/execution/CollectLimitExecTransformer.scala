@@ -16,16 +16,17 @@
  */
 package io.glutenproject.execution
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import io.glutenproject.extension.{GlutenPlan, ValidationResult}
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, SinglePartition}
-import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
 import org.apache.spark.sql.execution.{ColumnarCollapseTransformStages, ColumnarShuffleExchangeExec, SparkPlan, UnaryExecNode}
+import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
 import org.apache.spark.sql.vectorized.ColumnarBatch
+
+import java.util.concurrent.atomic.AtomicInteger
 
 case class CollectLimitExecTransformer(limit: Int, child: SparkPlan, offset: Long)
   extends UnaryExecNode
@@ -70,7 +71,9 @@ case class CollectLimitExecTransformer(limit: Int, child: SparkPlan, offset: Lon
             LimitTransformer(wholeStage.child, 0, limit)
           case other =>
             LimitTransformer(
-              ColumnarCollapseTransformStages.wrapInputIteratorTransformer(other), 0, limit)
+              ColumnarCollapseTransformStages.wrapInputIteratorTransformer(other),
+              0,
+              limit)
         }
         val limitStagePlan =
           WholeStageTransformer(limitBeforeShuffle)(transformStageCounter.incrementAndGet())

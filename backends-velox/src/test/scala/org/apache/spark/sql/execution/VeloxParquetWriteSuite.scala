@@ -25,7 +25,6 @@ import org.apache.spark.SparkConf
 import org.junit.Assert
 
 class VeloxParquetWriteSuite extends VeloxWholeStageTransformerSuite {
-  override protected val backend: String = "velox"
   override protected val resourcePath: String = "/tpch-data-parquet-velox"
   override protected val fileFormat: String = "parquet"
 
@@ -36,6 +35,20 @@ class VeloxParquetWriteSuite extends VeloxWholeStageTransformerSuite {
 
   override protected def sparkConf: SparkConf = {
     super.sparkConf.set("spark.gluten.sql.native.writer.enabled", "true")
+  }
+
+  test("test Array(Struct) fallback") {
+    withTempPath {
+      f =>
+        val path = f.getCanonicalPath
+        val testAppender = new LogAppender("native write tracker")
+        withLogAppender(testAppender) {
+          spark.sql("select array(struct(1), null) as var1").write.mode("overwrite").save(path)
+        }
+        assert(
+          testAppender.loggingEvents.exists(
+            _.getMessage.toString.contains("Use Gluten parquet write for hive")) == false)
+    }
   }
 
   test("test write parquet with compression codec") {

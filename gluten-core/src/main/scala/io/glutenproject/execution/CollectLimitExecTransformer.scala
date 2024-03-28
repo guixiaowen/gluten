@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 case class CollectLimitExecTransformer(limit: Int, child: SparkPlan, offset: Long)
   extends UnaryExecNode
-    with GlutenPlan {
+  with GlutenPlan {
 
   override def supportsColumnar: Boolean = true
 

@@ -372,7 +372,7 @@ case class AddTransformHintRule() extends Rule[SparkPlan] {
     !scanOnly && columnarConf.enableTakeOrderedAndProject &&
       enableColumnarSort && enableColumnarLimit && enableColumnarShuffle && enableColumnarProject
   val enableCollectLimit: Boolean =
-    !scanOnly && columnarConf.enableCollectLimit&&
+    !scanOnly && columnarConf.enableCollectLimit &&
       enableColumnarSort && enableColumnarLimit && enableColumnarShuffle && enableColumnarProject
   val enableColumnarWrite: Boolean = BackendsApiManager.getSettings.enableNativeWriteFiles()
   val enableCartesianProduct: Boolean =

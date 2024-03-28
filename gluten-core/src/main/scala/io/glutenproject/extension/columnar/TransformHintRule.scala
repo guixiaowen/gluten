@@ -744,7 +744,7 @@ case class AddTransformHintRule() extends Rule[SparkPlan] {
               "columnar collect limit  is not enabled in CollectLimitExec")
           } else {
             val (limit, offset) =
-              SparkShimLoader.getSparkShims.getLimitAndOffsetFromTopK(plan)
+              SparkShimLoader.getSparkShims.getLimitAndOffsetFromCollectLimit(plan)
             val transformer = CollectLimitExecTransformer(
               limit,
               plan.child,

@@ -17,7 +17,6 @@
 package io.glutenproject.sql.shims
 
 import io.glutenproject.expression.Sig
-
 import org.apache.spark.{SparkContext, TaskContext}
 import org.apache.spark.internal.io.FileCommitProtocol
 import org.apache.spark.scheduler.TaskInfo
@@ -33,17 +32,15 @@ import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.connector.catalog.Table
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.connector.read.{InputPartition, Scan}
-import org.apache.spark.sql.execution.{FileSourceScanExec, GlobalLimitExec, SparkPlan, TakeOrderedAndProjectExec}
-import org.apache.spark.sql.execution.datasources.{FilePartition, FileScanRDD, PartitionDirectory, PartitionedFile, PartitioningAwareFileIndex, WriteJobDescription, WriteTaskResult}
+import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.execution.datasources.v2.BatchScanExec
 import org.apache.spark.sql.execution.datasources.v2.text.TextScan
 import org.apache.spark.sql.execution.exchange.{BroadcastExchangeLike, ShuffleExchangeLike}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.storage.{BlockId, BlockManagerId}
-
 import org.apache.hadoop.fs.{FileStatus, Path}
-
 import java.util.{ArrayList => JArrayList, Map => JMap}
 
 sealed abstract class ShimDescriptor
@@ -101,6 +98,8 @@ trait SparkShims {
   def extractSubPlanFromMightContain(expr: Expression): Option[SparkPlan]
 
   def getLimitAndOffsetFromGlobalLimit(plan: GlobalLimitExec): (Int, Int) = (plan.limit, 0)
+
+  def getLimitAndOffsetFromCollectLimit(plan: CollectLimitExec): (Int, Int) = (plan.limit, 0)
 
   def getLimitAndOffsetFromTopK(plan: TakeOrderedAndProjectExec): (Int, Int) = (plan.limit, 0)
 

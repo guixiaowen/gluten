@@ -19,7 +19,9 @@ package io.glutenproject.sql.shims.spark35
 import io.glutenproject.GlutenConfig
 import io.glutenproject.expression.{ExpressionNames, Sig}
 import io.glutenproject.sql.shims.{ShimDescriptor, SparkShims}
-import org.apache.spark._
+
+import org.apache.spark.{ShuffleUtils, SparkContext, SparkContextUtils, SparkException, TaskContext, TaskContextUtils}
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.internal.io.FileCommitProtocol
 import org.apache.spark.paths.SparkPath
 import org.apache.spark.scheduler.TaskInfo
@@ -36,8 +38,8 @@ import org.apache.spark.sql.catalyst.types.DataTypeUtils
 import org.apache.spark.sql.catalyst.util.TimestampFormatter
 import org.apache.spark.sql.connector.catalog.Table
 import org.apache.spark.sql.connector.expressions.Transform
-import org.apache.spark.sql.execution._
-import org.apache.spark.sql.execution.datasources._
+import org.apache.spark.sql.execution.{FileSourceScanExec, GlobalLimitExec, GlutenFileFormatWriter, PartitionedFileUtil, SparkPlan, TakeOrderedAndProjectExec}
+import org.apache.spark.sql.execution.datasources.{BucketingUtils, FileFormat, FilePartition, FileScanRDD, FileStatusWithMetadata, PartitionDirectory, PartitionedFile, PartitioningAwareFileIndex, WriteJobDescription, WriteTaskResult}
 import org.apache.spark.sql.execution.datasources.v2.BatchScanExec
 import org.apache.spark.sql.execution.datasources.v2.text.TextScan
 import org.apache.spark.sql.execution.datasources.v2.utils.CatalogUtil
@@ -45,9 +47,13 @@ import org.apache.spark.sql.execution.exchange.{BroadcastExchangeLike, ShuffleEx
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.storage.{BlockId, BlockManagerId}
+
 import org.apache.hadoop.fs.{FileStatus, Path}
+
 import java.time.ZoneOffset
 import java.util.{HashMap => JHashMap, Map => JMap}
+
+import scala.reflect.ClassTag
 
 class Spark35Shims extends SparkShims {
   override def getShimDescriptor: ShimDescriptor = SparkShimProvider.DESCRIPTOR
@@ -58,7 +64,7 @@ class Spark35Shims extends SparkShims {
     ClusteredDistribution(leftKeys) :: ClusteredDistribution(rightKeys) :: Nil
   }
 
-  override def expressionMappings: Seq[Sig] = {
+  override def scalarExpressionMappings: Seq[Sig] = {
     val list = if (GlutenConfig.getConf.enableNativeBloomFilter) {
       Seq(
         Sig[BloomFilterMightContain](ExpressionNames.MIGHT_CONTAIN),
@@ -69,8 +75,9 @@ class Spark35Shims extends SparkShims {
       Sig[Sec](ExpressionNames.SEC),
       Sig[Csc](ExpressionNames.CSC),
       Sig[Empty2Null](ExpressionNames.EMPTY2NULL))
-
   }
+
+  override def aggregateExpressionMappings: Seq[Sig] = Seq.empty
 
   override def convertPartitionTransforms(
       partitions: Seq[Transform]): (Seq[String], Option[BucketSpec]) = {
@@ -203,10 +210,6 @@ class Spark35Shims extends SparkShims {
     (getLimit(plan.limit, plan.offset), plan.offset)
   }
 
-  override def getLimitAndOffsetFromCollectLimit(plan: CollectLimitExec): (Int, Int) = {
-    (getLimit(plan.limit, plan.offset), plan.offset)
-  }
-
   override def getLimitAndOffsetFromTopK(plan: TakeOrderedAndProjectExec): (Int, Int) = {
     (getLimit(plan.limit, plan.offset), plan.offset)
   }
@@ -236,6 +239,10 @@ class Spark35Shims extends SparkShims {
 
   override def createTestTaskContext(): TaskContext = {
     TaskContextUtils.createTestTaskContext()
+  }
+
+  override def broadcastInternal[T: ClassTag](sc: SparkContext, value: T): Broadcast[T] = {
+    SparkContextUtils.broadcastInternal(sc, value)
   }
 
   override def setJobDescriptionOrTagForBroadcastExchange(
@@ -310,4 +317,6 @@ class Spark35Shims extends SparkShims {
 
   override def getCommonPartitionValues(batchScan: BatchScanExec): Option[Seq[(InternalRow, Int)]] =
     null
+
+  override def supportsRowBased(plan: SparkPlan): Boolean = plan.supportsRowBased
 }

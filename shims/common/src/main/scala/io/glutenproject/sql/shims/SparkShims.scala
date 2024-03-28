@@ -17,6 +17,7 @@
 package io.glutenproject.sql.shims
 
 import io.glutenproject.expression.Sig
+
 import org.apache.spark.{SparkContext, TaskContext}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.internal.io.FileCommitProtocol
@@ -41,7 +42,9 @@ import org.apache.spark.sql.execution.exchange.{BroadcastExchangeLike, ShuffleEx
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.storage.{BlockId, BlockManagerId}
+
 import org.apache.hadoop.fs.{FileStatus, Path}
+
 import java.util.{ArrayList => JArrayList, Map => JMap}
 
 import scala.reflect.ClassTag

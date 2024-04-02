@@ -62,25 +62,27 @@ case class CollectLimitExecTransformer(limit: Int, child: SparkPlan, offset: Lon
     } else {
       val transformStageCounter: AtomicInteger =
         ColumnarCollapseTransformStages.transformStageCounter
-      val finalLimitPlan = if (childRDD.getNumPartitions == 1) {
-        LimitTransformer(child, offset, limit)
-      } else {
 
-        val limitBeforeShuffle = child match {
-          case wholeStage: WholeStageTransformer =>
-            LimitTransformer(wholeStage.child, 0, limit)
-          case other =>
-            LimitTransformer(
-              ColumnarCollapseTransformStages.wrapInputIteratorTransformer(other),
-              0,
-              limit)
-        }
+      val childTransformer = child match {
+        case wholeStage: WholeStageTransformer =>
+          LimitTransformer(wholeStage.child, 0, limit)
+        case other =>
+          LimitTransformer(
+            ColumnarCollapseTransformStages.wrapInputIteratorTransformer(other),
+            0,
+            limit)
+      }
+
+      val finalLimitPlan = if (childRDD.getNumPartitions == 1) {
+        childTransformer
+      } else {
         val limitStagePlan =
-          WholeStageTransformer(limitBeforeShuffle)(transformStageCounter.incrementAndGet())
+          WholeStageTransformer(childTransformer)(transformStageCounter.incrementAndGet())
         val shuffleExec = ShuffleExchangeExec(SinglePartition, limitStagePlan)
         val transformedShuffleExec =
           ColumnarShuffleExchangeExec(shuffleExec, limitStagePlan, shuffleExec.child.output)
-        LimitTransformer(transformedShuffleExec, offset, limit)
+        LimitTransformer(ColumnarCollapseTransformStages.
+          wrapInputIteratorTransformer(transformedShuffleExec), offset, limit)
       }
 
       val finalPlan =

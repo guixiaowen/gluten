@@ -259,6 +259,19 @@ abstract class VeloxTPCHSuite extends VeloxTPCHTableSupport {
     val expectedResult = Seq(Row(0), Row(1), Row(2), Row(3), Row(4))
     TestUtils.compareAnswers(result, expectedResult)
   }
+
+  test("test 'collect limit'") {
+    val df = spark.sql(
+      """
+        |select n_nationkey from nation limit 5
+        |""".stripMargin
+    )
+    val sortExec = df.queryExecution.executedPlan.collect {
+      case sortExec: CollectLimitExecTransformer => sortExec
+    }
+    assert(sortExec.size == 1)
+
+  }
 }
 
 class VeloxTPCHDistinctSpill extends VeloxTPCHTableSupport {

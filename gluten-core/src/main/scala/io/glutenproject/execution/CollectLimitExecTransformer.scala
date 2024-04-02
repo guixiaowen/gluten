@@ -81,8 +81,10 @@ case class CollectLimitExecTransformer(limit: Int, child: SparkPlan, offset: Lon
         val shuffleExec = ShuffleExchangeExec(SinglePartition, limitStagePlan)
         val transformedShuffleExec =
           ColumnarShuffleExchangeExec(shuffleExec, limitStagePlan, shuffleExec.child.output)
-        LimitTransformer(ColumnarCollapseTransformStages.
-          wrapInputIteratorTransformer(transformedShuffleExec), offset, limit)
+        LimitTransformer(
+          ColumnarCollapseTransformStages.wrapInputIteratorTransformer(transformedShuffleExec),
+          offset,
+          limit)
       }
 
       val finalPlan =

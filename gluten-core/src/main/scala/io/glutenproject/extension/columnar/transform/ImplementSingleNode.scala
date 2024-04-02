@@ -401,7 +401,8 @@ object ImplementOthers {
             offset)
         case plan: CollectLimitExec =>
           logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
-          val (limit, offset) = SparkShimLoader.getSparkShims.getLimitAndOffsetFromCollectLimit(plan)
+          val (limit, offset) = SparkShimLoader.getSparkShims
+            .getLimitAndOffsetFromCollectLimit(plan)
           CollectLimitExecTransformer(
             limit,
             plan.child,

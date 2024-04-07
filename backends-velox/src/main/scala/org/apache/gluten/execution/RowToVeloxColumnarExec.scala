@@ -62,6 +62,8 @@ case class RowToVeloxColumnarExec(child: SparkPlan) extends RowToColumnarExecBas
     // This avoids calling `schema` in the RDD closure, so that we don't need to include the entire
     // plan (this) in the closure.
     val localSchema = schema
+
+
     child.execute().mapPartitions {
       rowIterator =>
         RowToVeloxColumnarExec.toColumnarBatchIterator(

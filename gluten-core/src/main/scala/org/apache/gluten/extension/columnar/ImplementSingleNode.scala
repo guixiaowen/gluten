@@ -399,6 +399,15 @@ object ImplementOthers {
             plan.projectList,
             child,
             offset)
+<<<<<<< HEAD
+=======
+        case plan: CollectLimitExec =>
+          logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
+          val (limit, offset) = SparkShimLoader.getSparkShims
+            .getLimitAndOffsetFromCollectLimit(plan)
+          BackendsApiManager.getSparkPlanExecApiInstance
+            .genColumnarCollectLimit(plan.child, offset, limit)
+>>>>>>> fca12bb23 ([GLUTEN-5125]Support CollectLimitExec #5125 #5269)
         case plan: WindowExec =>
           WindowExecTransformer(
             plan.windowExpression,

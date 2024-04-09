@@ -732,6 +732,21 @@ case class AddTransformHintRule() extends Rule[SparkPlan] {
               offset)
             transformer.doValidate().tagOnFallback(plan)
           }
+<<<<<<< HEAD
+=======
+        case plan: CollectLimitExec =>
+          if (!enableCollectLimit) {
+            TransformHints.tagNotTransformable(
+              plan,
+              "columnar collect limit  is not enabled in CollectLimitExec")
+          } else {
+            val (limit, offset) =
+              SparkShimLoader.getSparkShims.getLimitAndOffsetFromCollectLimit(plan)
+            val transformer = BackendsApiManager.getSparkPlanExecApiInstance
+              .genColumnarCollectLimit(plan.child, offset, limit)
+            transformer.doValidate().tagOnFallback(plan)
+          }
+>>>>>>> fca12bb23 ([GLUTEN-5125]Support CollectLimitExec #5125 #5269)
         case _ =>
         // Currently we assume a plan to be transformable by default.
       }

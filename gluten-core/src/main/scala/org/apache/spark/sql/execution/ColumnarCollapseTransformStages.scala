@@ -121,6 +121,7 @@ case class ColumnarCollapseTransformStages(
 
   def apply(plan: SparkPlan): SparkPlan = {
     insertWholeStageTransformer(plan)
+
   }
 
   /**
